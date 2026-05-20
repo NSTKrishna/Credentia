@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String      @id @default(uuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         Role        @default(RECRUITER)
+  createdAt    DateTime    @default(now())
+  candidates   Candidate[]
+}
+
+model Candidate {
+  id               String             @id @default(uuid())
+  fullName         String
+  email            String
+  phone            String
+  aadhaarNumber    String
+  panNumber        String
+  dob              DateTime
+  address          String
+  status           VerificationStatus @default(PENDING)
+  createdAt        DateTime           @default(now())
+  createdById      String
+  createdBy        User               @relation(fields: [createdById], references: [id])
+  verificationLogs VerificationLog[]
+  report           Report?
+}
+
+model VerificationLog {
+  id                 String    @id @default(uuid())
+  candidateId        String
+  verificationType   String
+  requestPayload     Json
+  responsePayload    Json
+  verificationStatus String
+  verifiedAt         DateTime  @default(now())
+  candidate          Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model Report {
+  id          String    @id @default(uuid())
+  candidateId String    @unique
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  pdfUrl      String?
+  generatedAt DateTime  @default(now())
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  PARTIAL
+}
+
+enum Role {
+  ADMIN
+  RECRUITER
+}
