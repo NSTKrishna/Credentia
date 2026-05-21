@@ -21,12 +21,7 @@ export const reportService = {
   },
 
   downloadReport: async (candidateId: string, candidateName?: string) => {
-    // Open backend download endpoint in a new tab — browser will follow redirects to Cloudinary.
     if (typeof window !== 'undefined') {
-      const downloadUrl = `${API_URL}/reports/${candidateId}`;
-      window.open(downloadUrl, '_blank');
-    } else {
-      // Fallback for non-browser environments: attempt an axios request (not typical)
       const response = await axios.get(`${API_URL}/reports/${candidateId}`, {
         ...getAuthHeaders(),
         responseType: 'blob',
