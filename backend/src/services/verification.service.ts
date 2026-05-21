@@ -221,6 +221,9 @@ export const startVerification = async (candidateId: string, userId: string) => 
     aadhaarResult,
     panResult,
     overallStatus,
-    candidate: updatedCandidate,
+    candidate: {
+      ...updatedCandidate,
+      aadhaarNumber: maskAadhaar(updatedCandidate.aadhaarNumber),
+    },
   };
 };

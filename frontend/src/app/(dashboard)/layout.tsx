@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { ToastProvider } from '@/components/ui/Toast';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

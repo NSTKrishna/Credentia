@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_URL } from './api';
 
 const getAuthHeaders = () => {
   const token = useAuthStore.getState().token || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');

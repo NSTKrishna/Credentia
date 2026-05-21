@@ -3,12 +3,17 @@ import { maskAadhaar } from '../utils/masks';
 import { VerificationStatus, Prisma } from '@prisma/client';
 
 export const createCandidate = async (data: any, userId: string) => {
-  return await prisma.candidate.create({
+  const candidate = await prisma.candidate.create({
     data: {
       ...data,
       createdById: userId,
     },
   });
+
+  return {
+    ...candidate,
+    aadhaarNumber: maskAadhaar(candidate.aadhaarNumber),
+  };
 };
 
 export const getCandidates = async (
@@ -84,10 +89,15 @@ export const updateCandidate = async (id: string, data: any, userId: string) => 
 
   if (!existing) return null;
 
-  return await prisma.candidate.update({
+  const updated = await prisma.candidate.update({
     where: { id },
     data,
   });
+
+  return {
+    ...updated,
+    aadhaarNumber: maskAadhaar(updated.aadhaarNumber),
+  };
 };
 
 export const deleteCandidate = async (id: string, userId: string) => {

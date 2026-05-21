@@ -1,0 +1,95 @@
+name: CI + Optional Render Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend build + test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: credentia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/credentia
+      JWT_SECRET: ci_dummy_secret
+      NODE_ENV: test
+      FRONTEND_URL: http://localhost:3000
+      AADHAAR_API_URL: http://localhost:5000/mock-api/aadhaar/verify
+      PAN_API_URL: http://localhost:5000/mock-api/pan/verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Prisma migrate
+        run: npx prisma migrate deploy
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+  frontend:
+    name: Frontend build + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:5000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+  deploy:
+    name: Trigger Render deploy (optional)
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
+    steps:
+      - name: Trigger deploy hook
+        run: |
+          curl -fsSL -X POST "$RENDER_DEPLOY_HOOK_URL"
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}

@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import * as reportService from '../services/report.service';
 import prisma from '../prisma/client';
+import { maskAadhaar } from '../utils/masks';
 
 export const listReports = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
@@ -15,7 +16,16 @@ export const listReports = async (req: AuthRequest, res: Response): Promise<any>
       },
       orderBy: { generatedAt: 'desc' },
     });
-    return res.status(200).json(reports);
+
+    const masked = reports.map((report) => ({
+      ...report,
+      candidate: {
+        ...report.candidate,
+        aadhaarNumber: maskAadhaar(report.candidate.aadhaarNumber),
+      },
+    }));
+
+    return res.status(200).json(masked);
   } catch (error: any) {
     console.error('Error listing reports:', error.message);
     return res.status(500).json({ error: 'Internal server error' });

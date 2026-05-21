@@ -33,10 +33,14 @@ app.use(
   })
 );
 
-// ─── Security: CORS — restrict to FRONTEND_URL only ─────────────────────────
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL]
-  : ['http://localhost:3000']; // Dev fallback
+// ─── Security: CORS — restrict to allowed frontend origins ─────────────────
+// Supports either:
+// - FRONTEND_URL="https://your-frontend"
+// - FRONTEND_URLS="https://a.com,https://b.com" (comma-separated)
+const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:3000')
+  .split(',')
+  .map((v) => v.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
@@ -48,7 +52,7 @@ app.use(
       return callback(new Error(`CORS: Origin "${origin}" not allowed`));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
   })
 );
