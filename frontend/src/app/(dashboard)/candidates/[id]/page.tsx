@@ -93,8 +93,54 @@ export default function CandidateDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Spinner size="lg" />
+      <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-slate-200 rounded-lg"></div>
+          <div>
+            <div className="h-8 bg-slate-200 rounded w-64 mb-2"></div>
+            <div className="h-4 bg-slate-200 rounded w-48"></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 h-[380px]">
+              <div className="h-14 border-b border-slate-100 bg-slate-50 rounded-t-xl"></div>
+              <div className="p-6 space-y-6">
+                <div className="h-4 bg-slate-200 rounded w-full"></div>
+                <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                <div className="h-4 bg-slate-200 rounded w-5/6"></div>
+                <div className="h-10 bg-slate-200 rounded w-full mt-8"></div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 h-[220px]">
+              <div className="h-14 border-b border-slate-100 bg-slate-50 rounded-t-xl"></div>
+              <div className="p-6 flex flex-col items-center justify-center h-full">
+                <div className="w-14 h-14 rounded-full bg-slate-200 mb-4"></div>
+                <div className="h-4 bg-slate-200 rounded w-32"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 h-[480px]">
+              <div className="h-14 border-b border-slate-100 bg-slate-50 rounded-t-xl"></div>
+              <div className="p-6 border-b border-slate-100 flex justify-center py-10">
+                <div className="w-32 h-10 bg-slate-200 rounded-full"></div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="h-14 bg-slate-200 rounded-lg w-full"></div>
+                <div className="h-14 bg-slate-200 rounded-lg w-full"></div>
+              </div>
+              <div className="p-6">
+                <div className="h-12 bg-slate-200 rounded-lg w-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

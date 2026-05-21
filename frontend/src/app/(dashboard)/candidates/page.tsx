@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { CandidateFormModal } from '@/components/candidates/CandidateFormModal';
 import { DeleteConfirmModal } from '@/components/candidates/DeleteConfirmModal';
 import { candidateService } from '@/services/candidate.service';
-import { Plus, Search, Eye, Play, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Eye, Play, Trash2, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CandidatesPage() {
@@ -163,8 +163,21 @@ export default function CandidatesPage() {
                 ))
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
-                    No candidates found. Try adjusting your filters.
+                  <td colSpan={8} className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="bg-slate-100 p-4 rounded-full mb-4">
+                        <ShieldCheck className="w-8 h-8 text-slate-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-slate-900 mb-1">No candidates yet</h3>
+                      <p className="text-slate-500 mb-6">Get started by adding your first candidate for verification.</p>
+                      <button
+                        onClick={() => setIsFormOpen(true)}
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Add Candidate
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (

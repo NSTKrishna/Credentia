@@ -34,14 +34,6 @@ export default function DashboardOverviewPage() {
     fetchData();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="p-4 bg-red-50 text-red-600 rounded-lg">
@@ -59,30 +51,26 @@ export default function DashboardOverviewPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <StatCard
-          label="Total Candidates"
-          value={stats?.total || 0}
-          icon={Users}
-          color="blue"
-        />
-        <StatCard
-          label="Verified"
-          value={stats?.verified || 0}
-          icon={CheckCircle}
-          color="green"
-        />
-        <StatCard
-          label="Pending"
-          value={stats?.pending || 0}
-          icon={Clock}
-          color="amber"
-        />
-        <StatCard
-          label="Failed"
-          value={stats?.failed || 0}
-          icon={XCircle}
-          color="red"
-        />
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-slate-200"></div>
+                <div>
+                  <div className="h-4 bg-slate-200 rounded w-20 mb-2"></div>
+                  <div className="h-8 bg-slate-200 rounded w-12"></div>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <>
+            <StatCard label="Total Candidates" value={stats?.total || 0} icon={Users} color="blue" />
+            <StatCard label="Verified" value={stats?.verified || 0} icon={CheckCircle} color="green" />
+            <StatCard label="Pending" value={stats?.pending || 0} icon={Clock} color="amber" />
+            <StatCard label="Failed" value={stats?.failed || 0} icon={XCircle} color="red" />
+          </>
+        )}
       </div>
 
       {/* Recent Candidates Table */}
@@ -92,7 +80,7 @@ export default function DashboardOverviewPage() {
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 font-medium border-b border-slate-100">Name</th>
@@ -103,7 +91,17 @@ export default function DashboardOverviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {recentCandidates.length === 0 ? (
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-32"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-40"></div></td>
+                    <td className="px-6 py-4"><div className="h-6 bg-slate-200 rounded-full w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4"><div className="h-6 bg-slate-200 rounded w-16 ml-auto"></div></td>
+                  </tr>
+                ))
+              ) : recentCandidates.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
                     No candidates found.
@@ -125,10 +123,10 @@ export default function DashboardOverviewPage() {
                       {new Date(candidate.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                      <Link href={`/candidates/${candidate.id}`} className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
                         <Eye className="w-4 h-4 mr-1" />
                         View
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))
