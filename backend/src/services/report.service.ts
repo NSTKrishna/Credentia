@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import fs from 'fs';
 import path from 'path';
 import { uploadBufferToCloudinary } from './cloudinary.service';
@@ -37,15 +37,37 @@ export const generateReport = async (candidateId: string, userId: string) => {
   // Step 3: Launch Puppeteer and render to PDF
   let browser;
   try {
-    browser = await puppeteer.launch({
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--no-zygote',
-      ],
-      headless: true,
-    });
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+    if (isProduction) {
+      const chromium = require('@sparticuz/chromium');
+      browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
+    } else {
+      // Local development fallback — look for local Chrome executable
+      let executablePath = '';
+      if (process.platform === 'darwin') {
+        executablePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+      } else if (process.platform === 'win32') {
+        executablePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+      } else {
+        executablePath = '/usr/bin/google-chrome';
+      }
+
+      if (!fs.existsSync(executablePath)) {
+        console.warn(`Local Chrome not found at ${executablePath}. Attempting default launch...`);
+        executablePath = '';
+      }
+
+      browser = await puppeteer.launch({
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        headless: true,
+        ...(executablePath ? { executablePath } : {}),
+      });
+    }
   } catch (launchError: any) {
     console.error('Puppeteer browser launch failed:', launchError.message || launchError);
     throw new Error(`PDF engine launch failed: ${launchError.message || launchError}`);
