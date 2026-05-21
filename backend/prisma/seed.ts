@@ -52,38 +52,79 @@ async function main() {
     },
   });
 
-  const candidatesSeed = [
-    {
-      fullName: 'Riya Sharma',
-      email: 'riya.sharma@example.com',
-      phone: '+91-90000-00001',
-      aadhaarNumber: '1234-5678-9012',
-      panNumber: 'ABCDE1234F',
-      dob: new Date('1997-03-14'),
-      address: 'Bengaluru, Karnataka',
-      status: VerificationStatus.PENDING,
-    },
-    {
-      fullName: 'Arjun Singh',
-      email: 'arjun.singh@example.com',
-      phone: '+91-90000-00002',
-      aadhaarNumber: '2345-6789-0123',
-      panNumber: 'PQRSX6789K',
-      dob: new Date('1994-11-02'),
-      address: 'Pune, Maharashtra',
-      status: VerificationStatus.VERIFIED,
-    },
-    {
-      fullName: 'Meera Iyer',
-      email: 'meera.iyer@example.com',
-      phone: '+91-90000-00003',
-      aadhaarNumber: '3456-7890-1234',
-      panNumber: 'LMNOP4321Z',
-      dob: new Date('1999-08-21'),
-      address: 'Chennai, Tamil Nadu',
-      status: VerificationStatus.PARTIAL,
-    },
+  const names = [
+    'Riya Sharma',
+    'Arjun Singh',
+    'Meera Iyer',
+    'Karan Mehta',
+    'Ananya Rao',
+    'Vikram Patel',
+    'Sneha Nair',
+    'Rahul Verma',
+    'Priya Kapoor',
+    'Aditya Joshi',
   ];
+
+  const cities = [
+    'Bengaluru, Karnataka',
+    'Pune, Maharashtra',
+    'Chennai, Tamil Nadu',
+    'Hyderabad, Telangana',
+    'Mumbai, Maharashtra',
+    'Delhi, Delhi',
+    'Kochi, Kerala',
+    'Jaipur, Rajasthan',
+    'Ahmedabad, Gujarat',
+    'Kolkata, West Bengal',
+  ];
+
+  const statusCycle: VerificationStatus[] = [
+    VerificationStatus.PENDING,
+    VerificationStatus.VERIFIED,
+    VerificationStatus.PARTIAL,
+    VerificationStatus.FAILED,
+  ];
+
+  const pad4 = (num: number) => String(num).padStart(4, '0');
+  const makeAadhaar = (index: number) =>
+    `${pad4(1000 + index)}-${pad4(2000 + index)}-${pad4(3000 + index)}`;
+  const makePan = (index: number) => {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const a = letters[(index + 1) % 26];
+    const b = letters[(index + 7) % 26];
+    const c = letters[(index + 13) % 26];
+    const d = letters[(index + 19) % 26];
+    const e = letters[(index + 23) % 26];
+    const num = String(1000 + index);
+    const suffix = letters[(index + 5) % 26];
+    return `${a}${b}${c}${d}${e}${num}${suffix}`;
+  };
+
+  const getAadhaarLogStatus = (status: VerificationStatus) => {
+    if (status === VerificationStatus.FAILED) return 'FAILED';
+    return 'VERIFIED';
+  };
+  const getPanLogStatus = (status: VerificationStatus) => {
+    if (status === VerificationStatus.PENDING) return 'PENDING';
+    if (status === VerificationStatus.PARTIAL) return 'PENDING';
+    if (status === VerificationStatus.FAILED) return 'FAILED';
+    return 'VERIFIED';
+  };
+
+  const candidatesSeed = Array.from({ length: 10 }, (_, idx) => {
+    const safeIdx = idx + 1;
+    const email = `candidate${safeIdx}@credentia.dev`;
+    return {
+      fullName: names[idx] ?? `Candidate ${safeIdx}`,
+      email,
+      phone: `+91-90000-${String(safeIdx).padStart(5, '0')}`,
+      aadhaarNumber: makeAadhaar(safeIdx),
+      panNumber: makePan(safeIdx),
+      dob: new Date(1994 + (idx % 6), (idx * 2) % 12, 1 + ((idx * 3) % 28)),
+      address: cities[idx] ?? 'India',
+      status: statusCycle[idx % statusCycle.length],
+    };
+  });
 
   for (const candidateSeed of candidatesSeed) {
     const existing = await prisma.candidate.findFirst({
@@ -103,15 +144,13 @@ async function main() {
               verificationType: 'AADHAAR',
               requestPayload: { aadhaarNumber: candidateSeed.aadhaarNumber },
               responsePayload: { ok: true, match: true },
-              verificationStatus:
-                candidateSeed.status === VerificationStatus.FAILED ? 'FAILED' : 'VERIFIED',
+              verificationStatus: getAadhaarLogStatus(candidateSeed.status),
             },
             {
               verificationType: 'PAN',
               requestPayload: { panNumber: candidateSeed.panNumber },
               responsePayload: { ok: true, match: true },
-              verificationStatus:
-                candidateSeed.status === VerificationStatus.PENDING ? 'PENDING' : 'VERIFIED',
+              verificationStatus: getPanLogStatus(candidateSeed.status),
             },
           ],
         },
@@ -127,12 +166,10 @@ async function main() {
       select: { id: true },
     });
 
-    // Touch admin to avoid "unused" seed vars in some linters
-    await prisma.user.update({ where: { id: admin.id }, data: { name: admin.name } });
-
     console.log(`Seeded candidate ${candidateSeed.email} (${created.id})`);
   }
 
+  console.log(`Seeded users: ${admin.email}, ${recruiter.email}`);
   console.log('Seeding complete');
 }
 
