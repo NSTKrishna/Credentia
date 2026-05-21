@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
+import { uploadBufferToCloudinary } from './cloudinary.service';
 import prisma from '../prisma/client';
 import { generateReportHTML } from '../templates/report.template';
 
@@ -54,7 +55,17 @@ export const generateReport = async (candidateId: string, userId: string) => {
     await browser.close();
   }
 
-  // Step 4: Save PDF to /tmp/reports/
+  // Step 4: Upload PDF buffer to Cloudinary
+  let cloudUrl: string | null = null;
+  try {
+    const uploadResult = await uploadBufferToCloudinary(pdfBuffer, 'reports', candidateId);
+    cloudUrl = uploadResult.secure_url || uploadResult.url || null;
+  } catch (err) {
+    // If Cloudinary upload fails, continue to save locally and throw after persisting local path
+    cloudUrl = null;
+  }
+
+  // Still save a local copy in /tmp/reports/ (useful for local debugging/fallback)
   const reportsDir = path.join('/tmp', 'reports');
   if (!fs.existsSync(reportsDir)) {
     fs.mkdirSync(reportsDir, { recursive: true });
@@ -63,20 +74,22 @@ export const generateReport = async (candidateId: string, userId: string) => {
   const pdfPath = path.join(reportsDir, `${candidateId}.pdf`);
   fs.writeFileSync(pdfPath, pdfBuffer);
 
-  // Step 5: Upsert Report record in DB
+  // Step 5: Upsert Report record in DB (store Cloudinary URL if available, else local path)
+  const pdfUrlToStore = cloudUrl ?? pdfPath;
+
   const report = await prisma.report.upsert({
     where: { candidateId },
     create: {
       candidateId,
-      pdfUrl: pdfPath,
+      pdfUrl: pdfUrlToStore,
     },
     update: {
-      pdfUrl: pdfPath,
+      pdfUrl: pdfUrlToStore,
       generatedAt: new Date(),
     },
   });
 
-  return { report, pdfPath };
+  return { report, pdfPath, cloudUrl };
 };
 
 export const getReportPath = async (candidateId: string, userId: string): Promise<string> => {
@@ -103,11 +116,19 @@ export const getReportPath = async (candidateId: string, userId: string): Promis
     throw err;
   }
 
-  if (!fs.existsSync(report.pdfUrl)) {
+  const pdfUrl = report.pdfUrl;
+
+  // If pdfUrl is a remote URL (Cloudinary), return it directly
+  if (typeof pdfUrl === 'string' && (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://'))) {
+    return pdfUrl;
+  }
+
+  // Otherwise treat as local path
+  if (!fs.existsSync(pdfUrl)) {
     const err = new Error('Report file missing on disk. Please re-generate.');
     (err as any).status = 404;
     throw err;
   }
 
-  return report.pdfUrl;
+  return pdfUrl;
 };
