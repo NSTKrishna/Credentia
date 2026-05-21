@@ -35,10 +35,21 @@ export const generateReport = async (candidateId: string, userId: string) => {
   );
 
   // Step 3: Launch Puppeteer and render to PDF
-  const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    headless: true,
-  });
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--no-zygote',
+      ],
+      headless: true,
+    });
+  } catch (launchError: any) {
+    console.error('Puppeteer browser launch failed:', launchError.message || launchError);
+    throw new Error(`PDF engine launch failed: ${launchError.message || launchError}`);
+  }
 
   let pdfBuffer: Buffer;
 
@@ -52,7 +63,9 @@ export const generateReport = async (candidateId: string, userId: string) => {
       margin: { top: '1cm', bottom: '1cm', left: '1.5cm', right: '1.5cm' },
     }));
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close();
+    }
   }
 
   // Step 4: Upload PDF buffer to Cloudinary
