@@ -45,4 +45,25 @@ export const candidateService = {
     const response = await axios.post(`${API_URL}/verifications/${id}/start`, {}, getAuthHeaders());
     return response.data;
   },
+
+  generateReport: async (candidateId: string) => {
+    const response = await axios.post(`${API_URL}/reports/${candidateId}/generate`, {}, getAuthHeaders());
+    return response.data;
+  },
+
+  downloadReport: async (candidateId: string) => {
+    const response = await axios.get(`${API_URL}/reports/${candidateId}`, {
+      ...getAuthHeaders(),
+      responseType: 'blob', // Required to receive binary PDF data
+    });
+    // Create a temporary URL and trigger browser download
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `bgv-report-${candidateId.slice(0, 8)}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

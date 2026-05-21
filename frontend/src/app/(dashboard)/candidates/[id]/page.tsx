@@ -3,15 +3,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { candidateService } from '@/services/candidate.service';
+import { reportService } from '@/services/report.service';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Spinner } from '@/components/ui/Spinner';
 import { CandidateFormModal } from '@/components/candidates/CandidateFormModal';
 import { VerificationTimeline } from '@/components/candidates/VerificationTimeline';
 import { VerificationStepProgress } from '@/components/candidates/VerificationStepProgress';
+import { ReportPreview } from '@/components/reports/ReportPreview';
 import { useVerification } from '@/hooks/useVerification';
+import { useToast } from '@/components/ui/Toast';
 import { 
   ArrowLeft, Edit2, Shield, FileText, CheckCircle, XCircle, 
-  Clock, Play, FileDown, PlusCircle 
+  Clock, Play, FileDown, PlusCircle, Loader2
 } from 'lucide-react';
 
 export default function CandidateDetailPage() {
@@ -24,6 +27,9 @@ export default function CandidateDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportJustGenerated, setReportJustGenerated] = useState(false);
+  const { addToast } = useToast();
 
   const fetchCandidate = useCallback(async () => {
     try {
@@ -50,6 +56,30 @@ export default function CandidateDetailPage() {
     error: verificationError,
     startVerification: runVerification,
   } = useVerification(fetchCandidate);
+
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    setReportJustGenerated(false);
+    try {
+      await reportService.generateReport(id);
+      addToast('Report generated — click Download PDF to save it', 'success');
+      setReportJustGenerated(true);
+      fetchCandidate(); // Refresh to update report data in candidate object
+    } catch (err: any) {
+      addToast(err?.response?.data?.error || 'Failed to generate report', 'error');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    try {
+      await reportService.downloadReport(id, candidate?.fullName);
+      addToast('PDF download started!', 'success');
+    } catch {
+      addToast('Failed to download PDF', 'error');
+    }
+  };
 
   const maskAadhaar = (num: string) => {
     if (!num || num.length < 12) return num;
@@ -195,29 +225,44 @@ export default function CandidateDetailPage() {
                 Final Report
               </h2>
             </div>
-            <div className="p-6 text-center">
-              {candidate.report ? (
-                <div className="space-y-4">
-                  <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
-                    <FileDown className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">Report Generated</p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {new Date(candidate.report.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <button className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-sm">
-                    Download PDF
-                  </button>
+            <div className="p-5">
+              {/* Generating state: animated dots */}
+              {isGeneratingReport && (
+                <div className="flex flex-col items-center gap-3 py-6 animate-in fade-in duration-200">
+                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                  <p className="text-sm font-medium text-slate-600">
+                    Generating PDF
+                    <span className="inline-flex">
+                      <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                      <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                      <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+                    </span>
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto">
-                    <FileText className="w-8 h-8" />
+              )}
+
+              {/* Show ReportPreview once report exists or was just generated */}
+              {!isGeneratingReport && (candidate.report || reportJustGenerated) && (
+                <ReportPreview
+                  candidateId={id}
+                  candidateName={candidate.fullName}
+                  candidateEmail={candidate.email}
+                  candidatePhone={candidate.phone}
+                  overallStatus={candidate.status}
+                  verificationLogs={candidate.verificationLogs || []}
+                  generatedAt={candidate.report?.generatedAt}
+                />
+              )}
+
+              {/* No report yet */}
+              {!isGeneratingReport && !candidate.report && !reportJustGenerated && (
+                <div className="space-y-4 text-center py-4">
+                  <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+                    <FileText className="w-7 h-7" />
                   </div>
                   <p className="text-sm text-slate-500">No report has been generated yet.</p>
-                  <button 
+                  <button
+                    onClick={handleGenerateReport}
                     disabled={candidate.status === 'PENDING'}
                     className="w-full py-2 px-4 bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-medium rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center"
                   >

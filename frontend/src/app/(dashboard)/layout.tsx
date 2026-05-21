@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ShieldCheck, LayoutDashboard, Users, FileText, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { ToastProvider } from '@/components/ui/Toast';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <nav className="flex-1 px-4 space-y-2 mt-4">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
             const Icon = item.icon;
             return (
               <Link
@@ -78,7 +79,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content Area */}
       <main className="flex-1 ml-[240px] p-8">
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </main>
     </div>
   );
