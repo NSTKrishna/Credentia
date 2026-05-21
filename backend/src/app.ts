@@ -6,6 +6,7 @@ import authRouter from './routes/auth.routes';
 import candidateRouter from './routes/candidate.routes';
 import mockRouter from './routes/mock.routes';
 import verificationRouter from './routes/verification.routes';
+import statsRouter from './routes/stats.routes';
 import { verifyToken } from './middleware/auth.middleware';
 
 dotenv.config();
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/candidates', verifyToken, candidateRouter);
 app.use('/api/verifications', verifyToken, verificationRouter);
+app.use('/api/stats', verifyToken, statsRouter);
 app.use('/mock-api', mockRouter);
 
 app.get('/health', (req, res) => {
