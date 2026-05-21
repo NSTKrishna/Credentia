@@ -15,10 +15,13 @@ export const startVerification = async (req: AuthRequest, res: Response): Promis
 
     return res.status(200).json(result);
   } catch (error: any) {
-    console.error('Error starting verification:', error);
     if (error.status === 404) {
       return res.status(404).json({ error: 'Candidate not found' });
     }
+    if (error.status === 403) {
+      return res.status(403).json({ error: 'You do not have permission to verify this candidate' });
+    }
+    console.error('Error starting verification:', error.message);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };

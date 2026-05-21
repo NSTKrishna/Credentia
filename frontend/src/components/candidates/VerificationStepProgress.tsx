@@ -1,82 +1,87 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import React from 'react';
+import { Loader2, CheckCircle, XCircle, Circle } from 'lucide-react';
+import { VerificationStep } from '@/hooks/useVerification';
 
 interface VerificationStepProgressProps {
-  isVerifying: boolean;
-  result: any;
+  steps: VerificationStep[];
+  overallStatus: string | null;
+  error?: string | null;
 }
 
-export const VerificationStepProgress: React.FC<VerificationStepProgressProps> = ({ isVerifying, result }) => {
-  const [step, setStep] = useState(0);
+const StepIcon: React.FC<{ status: VerificationStep['status'] }> = ({ status }) => {
+  switch (status) {
+    case 'running':
+      return <Loader2 className="w-5 h-5 text-blue-600 animate-spin shrink-0" />;
+    case 'success':
+      return <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />;
+    case 'failed':
+      return <XCircle className="w-5 h-5 text-red-500 shrink-0" />;
+    default:
+      return <Circle className="w-5 h-5 text-slate-300 shrink-0" />;
+  }
+};
 
-  useEffect(() => {
-    if (isVerifying) {
-      setStep(1); // Start the process
-      
-      // Step 2: Aadhaar (after 800ms)
-      const timer1 = setTimeout(() => setStep(2), 800);
-      
-      // Step 3: PAN (after 1800ms)
-      const timer2 = setTimeout(() => setStep(3), 1800);
-      
-      // Step 4: Complete (after 2800ms or when result arrives)
-      const timer3 = setTimeout(() => {
-        if (result) setStep(4);
-      }, 2800);
+const stepTextColor = (status: VerificationStep['status']): string => {
+  switch (status) {
+    case 'running': return 'text-slate-800 font-medium';
+    case 'success': return 'text-green-700 font-medium';
+    case 'failed':  return 'text-red-700 font-medium';
+    default:        return 'text-slate-400';
+  }
+};
 
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-        clearTimeout(timer3);
-      };
-    } else if (result) {
-      // If result arrives without isVerifying being active, jump to end
-      setStep(4);
-    } else {
-      setStep(0);
-    }
-  }, [isVerifying, result]);
+const overallBg = (status: string | null): string => {
+  switch (status) {
+    case 'VERIFIED': return 'bg-green-50 border-green-200 text-green-800';
+    case 'FAILED':   return 'bg-red-50 border-red-200 text-red-800';
+    case 'PARTIAL':  return 'bg-orange-50 border-orange-200 text-orange-800';
+    default:         return 'bg-slate-50 border-slate-200 text-slate-800';
+  }
+};
 
-  if (step === 0) return null;
-
-  const renderIcon = (currentStep: number, targetStep: number, isFinalStatus: boolean = false, isFailed: boolean = false) => {
-    if (currentStep < targetStep) return <div className="w-5 h-5 rounded-full border-2 border-slate-200" />;
-    if (currentStep === targetStep && !isFinalStatus) return <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />;
-    if (isFailed) return <XCircle className="w-5 h-5 text-red-500" />;
-    return <CheckCircle className="w-5 h-5 text-green-500" />;
-  };
-
+export const VerificationStepProgress: React.FC<VerificationStepProgressProps> = ({
+  steps,
+  overallStatus,
+  error,
+}) => {
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-      <div className="flex items-center gap-3">
-        {renderIcon(step, 1)}
-        <span className={`text-sm ${step >= 1 ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
-          Submitting candidate details...
-        </span>
-      </div>
-      
-      <div className="flex items-center gap-3">
-        {renderIcon(step, 2, step >= 3, result?.aadhaarResult === 'FAILED' || result?.aadhaarResult?.status === 'failed')}
-        <span className={`text-sm ${step >= 2 ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
-          Running Aadhaar verification...
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3">
-        {renderIcon(step, 3, step >= 4, result?.panResult === 'FAILED' || result?.panResult?.status === 'failed')}
-        <span className={`text-sm ${step >= 3 ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
-          Running PAN verification...
-        </span>
-      </div>
-
-      {step === 4 && result && (
-        <div className="flex items-center gap-3 pt-2 border-t border-slate-200 animate-in fade-in duration-500">
-          {renderIcon(step, 4, true, result?.overallStatus === 'FAILED')}
-          <span className="text-sm font-bold text-slate-900">
-            Verification complete — {result.overallStatus}
+    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+      {steps.map((step, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 transition-all duration-300"
+          style={{ animationDelay: `${i * 100}ms` }}
+        >
+          <StepIcon status={step.status} />
+          <span className={`text-sm transition-colors duration-300 ${stepTextColor(step.status)}`}>
+            {step.label}
           </span>
+        </div>
+      ))}
+
+      {/* Overall result banner — fades in once overallStatus is set */}
+      {overallStatus && (
+        <div
+          className={`flex items-center gap-3 mt-4 pt-3 border-t border-slate-200 rounded-b-lg px-2 py-2 animate-in fade-in duration-500 ${overallBg(overallStatus)}`}
+        >
+          {overallStatus === 'VERIFIED' ? (
+            <CheckCircle className="w-5 h-5 shrink-0" />
+          ) : (
+            <XCircle className="w-5 h-5 shrink-0" />
+          )}
+          <span className="text-sm font-bold">
+            Verification complete — {overallStatus}
+          </span>
+        </div>
+      )}
+
+      {/* API-level error (e.g. 403, 500) */}
+      {error && !overallStatus && (
+        <div className="flex items-center gap-3 mt-4 pt-3 border-t border-red-100 bg-red-50 rounded-b-lg px-2 py-2 animate-in fade-in duration-300">
+          <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+          <span className="text-sm font-medium text-red-700">{error}</span>
         </div>
       )}
     </div>

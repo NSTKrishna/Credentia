@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { CandidateFormModal } from '@/components/candidates/CandidateFormModal';
 import { VerificationTimeline } from '@/components/candidates/VerificationTimeline';
 import { VerificationStepProgress } from '@/components/candidates/VerificationStepProgress';
+import { useVerification } from '@/hooks/useVerification';
 import { 
   ArrowLeft, Edit2, Shield, FileText, CheckCircle, XCircle, 
   Clock, Play, FileDown, PlusCircle 
@@ -16,15 +17,13 @@ import {
 export default function CandidateDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id = params.id as string;
+  const id = (params?.id as string) ?? '';
 
   const [candidate, setCandidate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationResult, setVerificationResult] = useState<any>(null);
 
   const fetchCandidate = useCallback(async () => {
     try {
@@ -42,26 +41,15 @@ export default function CandidateDetailPage() {
     fetchCandidate();
   }, [fetchCandidate]);
 
-  const handleStartVerification = async () => {
-    setIsVerifying(true);
-    setVerificationResult(null);
-    try {
-      const result = await candidateService.startVerification(id);
-      setVerificationResult(result);
-      // Wait for the animation to complete before full refresh
-      setTimeout(() => {
-        fetchCandidate();
-        setIsVerifying(false);
-      }, 3000); // 3 seconds to let step 4 show
-    } catch (err: any) {
-      console.error('Error verifying candidate:', err);
-      setVerificationResult({ overallStatus: 'FAILED' });
-      setTimeout(() => {
-        setIsVerifying(false);
-        fetchCandidate();
-      }, 3000);
-    }
-  };
+  // useVerification drives the step-by-step progress UI.
+  // onComplete refreshes the candidate data once verification finishes.
+  const {
+    isVerifying,
+    steps,
+    overallStatus: verificationOverallStatus,
+    error: verificationError,
+    startVerification: runVerification,
+  } = useVerification(fetchCandidate);
 
   const maskAadhaar = (num: string) => {
     if (!num || num.length < 12) return num;
@@ -271,11 +259,15 @@ export default function CandidateDetailPage() {
             </div>
 
             <div className="p-6 bg-slate-50 border-t border-slate-100">
-              {isVerifying || verificationResult ? (
-                <VerificationStepProgress isVerifying={isVerifying} result={verificationResult} />
+              {isVerifying || verificationOverallStatus ? (
+                <VerificationStepProgress
+                  steps={steps}
+                  overallStatus={verificationOverallStatus}
+                  error={verificationError}
+                />
               ) : (
                 <button
-                  onClick={handleStartVerification}
+                  onClick={() => runVerification(id)}
                   disabled={candidate.status === 'VERIFIED'}
                   className={`w-full py-3 rounded-lg font-bold flex items-center justify-center shadow-sm transition-all ${
                     candidate.status === 'VERIFIED'
